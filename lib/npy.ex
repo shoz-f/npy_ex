@@ -3,19 +3,19 @@ defmodule Npy do
   Peeking *.npy files.
   """
 
-  # npy data
-  defstruct descr: nil, fortran_order: false, shape: [], data: <<>>
+  alias __MODULE__
 
-  alias Npy
+  # npy data structure
+  defstruct descr: "", fortran_order: false, shape: [], data: <<>>
 
   @doc """
-  load npy
+  load *.npy
   """
   def load(fname) do
     res = File.open(fname, [:read], fn file ->
-      with <<0x93, "NUMPY", mejour, minor>> <- IO.binread(file, 8)
+      with <<0x93, "NUMPY", major, _minor>> <- IO.binread(file, 8)
       do
-        header_len = case mejour do
+        header_len = case major do
           1 -> <<len::little-16>> = IO.binread(file, 2); len
           _ -> <<len::little-32>> = IO.binread(file, 4); len
         end
@@ -48,24 +48,24 @@ defmodule Npy do
   end
 
   @doc """
-  save npy
+  save *.npy
   """
   def save(fname, %Npy{}=npy) do
-    header =
+    meta =
       "{'descr': '#{npy.descr}', 'fortran_order': #{if npy.fortran_order,do: "True",else: "False"}, 'shape': (#{Enum.join(npy.shape, ", ")}), }"
       |> (&(&1 <> String.duplicate(" ", 63-rem(byte_size(&1)+10, 64)) <> "\n")).()
       |> (&(<<0x93,"NUMPY",1,0,byte_size(&1)::little-integer-16>> <> &1)).()
 
     with {:ok, file} <- File.open(fname, [:write])
     do
-      IO.binwrite(file, header)
+      IO.binwrite(file, meta)
       IO.binwrite(file, npy.data)
       File.close(file)
     end
   end
 
   @doc """
-  convert to nested list
+  convert %Npy{} to nested list
   """
   def to_list(%Npy{descr: descr, shape: shape, data: data}) do
     flat_list = case descr do
@@ -82,7 +82,7 @@ defmodule Npy do
   defp list_forming([size|shape], formed), do: list_forming(shape, Enum.chunk_every(formed, size))
 
   @doc """
-  convert from nested list
+  convert %Npy{} from nested list
   """
   def from_list(x, descr) when length(x) > 0 do
     to_binary = case descr do
@@ -101,6 +101,6 @@ defmodule Npy do
   end
   def from_list(_, _), do: nil
 
-  def calc_shape([item|_]=x), do: [Enum.count(x)|calc_shape(item)]
-  def calc_shape(_),          do: []
+  defp calc_shape([item|_]=x), do: [Enum.count(x)|calc_shape(item)]
+  defp calc_shape(_),          do: []
 end
