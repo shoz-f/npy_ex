@@ -70,6 +70,7 @@ defmodule Npy do
   def to_list(%Npy{descr: descr, shape: shape, data: data}) do
     flat_list = case descr do
       "<f4" -> for <<x::little-float-32 <- data>> do x end
+      "<i1" -> for <<x::little-integer-8 <- data>> do x end
       "<i4" -> for <<x::little-integer-32 <- data>> do x end
       _ -> nil
     end
@@ -87,6 +88,7 @@ defmodule Npy do
   def from_list(x, descr) when length(x) > 0 do
     to_binary = case descr do
       "<f4" -> fn x,acc -> acc <> <<x::little-float-32>> end
+      "<i1" -> fn x,acc -> acc <> <<x::little-integer-8>> end
       "<i4" -> fn x,acc -> acc <> <<x::little-integer-32>> end
       _ -> nil
     end
