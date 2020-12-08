@@ -17,7 +17,7 @@ defmodule NpyTest do
   end
 
   test "load absent file" do
-    assert {:error, :enoent} = Npy.load("test/pred.npy")
+    assert {:error, :enoent} = Npy.load("test/nofile.npy")
   end
 
   test "to_list" do
