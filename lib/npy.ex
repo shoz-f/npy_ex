@@ -51,17 +51,24 @@ defmodule Npy do
   save *.npy
   """
   def save(fname, %Npy{}=npy) do
-    meta =
-      "{'descr': '#{npy.descr}', 'fortran_order': #{if npy.fortran_order,do: "True",else: "False"}, 'shape': (#{Enum.join(npy.shape, ", ")}), }"
-      |> (&(&1 <> String.duplicate(" ", 63-rem(byte_size(&1)+10, 64)) <> "\n")).()
-      |> (&(<<0x93,"NUMPY",1,0,byte_size(&1)::little-integer-16>> <> &1)).()
-
     with {:ok, file} <- File.open(fname, [:write])
     do
-      IO.binwrite(file, meta)
+      IO.binwrite(file, meta(npy))
       IO.binwrite(file, npy.data)
       File.close(file)
     end
+  end
+
+  @doc """
+  """
+  def to_bin(%Npy{}=npy) do
+    meta(npy) <> npy.data
+  end
+
+  defp meta(%Npy{}=npy) do
+    "{'descr': '#{npy.descr}', 'fortran_order': #{if npy.fortran_order,do: "True",else: "False"}, 'shape': (#{Enum.join(npy.shape, ", ")}), }"
+    |> (&(&1 <> String.duplicate(" ", 63-rem(byte_size(&1)+10, 64)) <> "\n")).()
+    |> (&(<<0x93,"NUMPY",1,0,byte_size(&1)::little-integer-16>> <> &1)).()
   end
 
   @doc """
