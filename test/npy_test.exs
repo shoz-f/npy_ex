@@ -13,13 +13,20 @@ defmodule NpyTest do
   end
 
   test "load illegal file" do
-    assert {:error, "illegal npy file"} = Npy.load("test/test_helper.exs")
+    assert {:error, "illegal npy format"} = Npy.load("test/test_helper.exs")
   end
 
   test "load absent file" do
     assert {:error, :enoent} = Npy.load("test/nofile.npy")
   end
 
+  test "save pred0.npy to pred1.npy" do
+  	{:ok, npy} = Npy.load("test/pred0.npy")
+  	Npy.save("test/pred1.npy", npy)
+    assert {:ok, npy} = Npy.load("test/pred1.npy")
+    assert %Npy{descr: "<f4", fortran_order: false, shape: [1,10647,4]} = npy
+  end
+  
   test "to_list" do
     assert {:ok, npy} = Npy.load("test/dog_output0.npy")
     assert [[[4.177847385406494, 2.4681198596954346,7.7223896980285645, 4.816765785217285]|_]] = Npy.to_list(npy)
