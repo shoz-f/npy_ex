@@ -7,9 +7,9 @@ defmodule Npy.MixProject do
       version: "0.1.0",
       elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
-      make_executable: "make",
-      make_clean: ["clean"],
-      compilers: [:elixir_make] ++ Mix.compilers(),
+#      make_executable: "make",
+#      make_clean: ["clean"],
+#      compilers: [:elixir_make] ++ Mix.compilers(),
       deps: deps()
     ]
   end
@@ -24,7 +24,7 @@ defmodule Npy.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-         {:elixir_make, "~> 0.6.2", runtime: false},
+#         {:elixir_make, "~> 0.6.2", runtime: false},
 #         {:exla, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "exla"},
          {:nx, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "nx", override: true}
     ]

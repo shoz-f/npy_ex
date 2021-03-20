@@ -1,6 +1,7 @@
 # Npy
 
-**TODO: Add description**
+handling npy/npz files. load %Npy{} or Nx.tensor from the file and save them.
+(experimetal)
 
 ## Installation
 
@@ -14,6 +15,9 @@ def deps do
   ]
 end
 ```
+
+### Attention
+./src is the memo for me. you don't need it.
 
 Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can

@@ -10,6 +10,8 @@ defmodule Npy do
 
   @doc """
   load from npy/npz
+  
+  > {:ok, list} = load("test/cifar10_weights.npz", :nx)
   """
   def load(fname, mode \\ :npy) when mode in [:npy, :nx] do
     try do
@@ -69,13 +71,15 @@ defmodule Npy do
   end
 
   @doc """
-  save *.npy
+  save %Npy{} or Nx.tensor into npy file.
   """
   def save(fname, npy_or_tensor) do
     File.write!(fname, to_bin(npy_or_tensor))
   end
 
   @doc """
+  save
+  save list of %Npy{} or %Nx.tensor into npz file.
   """
   def savez(fname, npys) when is_list(npys) do
     npz_list = if Keyword.keyword?(npys) do
@@ -88,6 +92,7 @@ defmodule Npy do
   end
 
   @doc """
+  convert %Npy{} or %Nx.tensor to npy binary.
   """
   def to_bin(%Npy{descr: descr, fortran_order: fortran_order, shape: shape, data: data}) do
     py_tuple = case shape do
@@ -146,6 +151,9 @@ defmodule Npy do
   defp calc_shape([item|_]=x), do: [Enum.count(x)|calc_shape(item)]
   defp calc_shape(_),          do: []
 
+  @doc """
+  convert Nx.tensor to %Npy{}
+  """
   def tensor2npy(%Nx.Tensor{}=tensor) do
     %Npy{
       descr: case Nx.type(tensor) do
@@ -167,6 +175,9 @@ defmodule Npy do
     }
   end
 
+  @doc """
+  convert %Npy{} to Nx.tensor
+  """
   def npy2tensor(%Npy{}=npy) do
     type = case npy.descr do
       "<i1" -> {:s,  8}
