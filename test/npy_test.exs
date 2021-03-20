@@ -4,16 +4,16 @@ defmodule NpyTest do
 
   test "load dog_output0.npy" do
     assert {:ok, npy} = Npy.load("test/dog_output0.npy")
-    assert %Npy{descr: "<f4", fortran_order: false, shape: [1,10647,4]} = npy
+    assert %Npy{descr: "<f4", fortran_order: false, shape: {1,10647,4}} = npy
   end
 
   test "load pred0.npy" do
     assert {:ok, npy} = Npy.load("test/pred0.npy")
-    assert %Npy{descr: "<f4", fortran_order: false, shape: [1,10647,4]} = npy
+    assert %Npy{descr: "<f4", fortran_order: false, shape: {1,10647,4}} = npy
   end
 
   test "load illegal file" do
-    assert {:error, "illegal npy format"} = Npy.load("test/test_helper.exs")
+    assert {:error, "illegal npy binary"} = Npy.load("test/illegal.npy")
   end
 
   test "load absent file" do
@@ -24,7 +24,7 @@ defmodule NpyTest do
   	{:ok, npy} = Npy.load("test/pred0.npy")
   	Npy.save("test/pred1.npy", npy)
     assert {:ok, npy} = Npy.load("test/pred1.npy")
-    assert %Npy{descr: "<f4", fortran_order: false, shape: [1,10647,4]} = npy
+    assert %Npy{descr: "<f4", fortran_order: false, shape: {1,10647,4}} = npy
   end
   
   test "to_list" do
@@ -33,12 +33,12 @@ defmodule NpyTest do
   end
   
   test "from_list: vector" do
-    assert %Npy{descr: "<i4", shape: [5], data: data} = Npy.from_list([1,2,3,4,5], "<i4")
+    assert %Npy{descr: "<i4", shape: {5}, data: data} = Npy.from_list([1,2,3,4,5], "<i4")
     assert data == <<1,0,0,0, 2,0,0,0, 3,0,0,0, 4,0,0,0, 5,0,0,0>>
   end
   
   test "from_list: matrix" do
-    assert %Npy{descr: "<f4", shape: [2,2], data: data} = Npy.from_list([[1.0, 0.0],[0.0, 1.0]], "<f4")
+    assert %Npy{descr: "<f4", shape: {2,2}, data: data} = Npy.from_list([[1.0, 0.0],[0.0, 1.0]], "<f4")
     assert <<1.0::little-32, 0.0::little-32, 0.0::little-32, 1.0::little-32>> == data
   end
 

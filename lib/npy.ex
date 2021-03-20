@@ -6,68 +6,42 @@ defmodule Npy do
   alias __MODULE__
 
   # npy data structure
-  defstruct descr: "", fortran_order: false, shape: [], data: <<>>
-
-  def tensor2npy(%Nx.Tensor{}=tensor) do
-    %Npy{
-      descr: case Nx.type(tensor) do
-        {:s,  8} -> "<i1"
-        {:s, 16} -> "<i2"
-        {:s, 32} -> "<i4"
-        {:s, 64} -> "<i8"
-        {:u,  8} -> "<u1"
-        {:u, 16} -> "<u2"
-        {:u, 32} -> "<u4"
-        {:u, 64} -> "<u8"
-        {:f, 32} -> "<f4"
-        {:f, 64} -> "<f8"
-        {:bf,16} -> "<f2"
-      end,
-      fortran_order: false,
-      shape: Tuple.to_list(Nx.shape(tensor)),
-      data: Nx.to_binary(tensor)
-    }
-  end
-
-  def npy2tensor(%Npy{}=npy) do
-    type = case npy.descr do
-      "<i1" -> {:s,  8}
-      "<i2" -> {:s, 16}
-      "<i4" -> {:s, 32}
-      "<i8" -> {:s, 64}
-      "<u1" -> {:u,  8}
-      "<u2" -> {:u, 16}
-      "<u4" -> {:u, 32}
-      "<u8" -> {:u, 64}
-      "<f4" -> {:f, 32}
-      "<f8" -> {:f, 64}
-      "<f2" -> {:bf,16}
-    end
-    
-    Nx.from_binary(npy.data, type)
-    |> Nx.reshape(List.to_tuple(npy.shape))
-  end
+  defstruct descr: "", fortran_order: false, shape: {}, data: <<>>
 
   @doc """
-  load *.npy
+  load from npy/npz
   """
-  def load(fname) do
-    case File.read(fname) do
-      {:ok, bin} -> from_bin(bin)
+  def load(fname, mode \\ :npy) when mode in [:npy, :nx] do
+    try do
+      case {Path.extname(fname), mode} do
+        {".npy", :npy} -> load_npy(fname, &from_bin!/1)
+        {".npy", :nx } -> load_npy(fname, &(npy2tensor(from_bin!(&1))))
+        {".npz", :npy} -> load_npz(fname, &from_bin!/1)
+        {".npz", :nx } -> load_npz(fname, &(npy2tensor(from_bin!(&1))))
+        _ -> {:error, "illegal file"}
+      end
+    rescue
+      err in [ArgumentError] -> {:error, err.message}
+    end
+  end
+
+  defp load_npy(fname, convert) do
+    with {:ok, bin} <- File.read(fname) do
+      {:ok, convert.(bin)}
+    else
       err -> err
     end
   end
 
-  @doc """
-  """
-  def load_tensor(fname) do
-    case load(fname) do
-      {:ok, npy} -> {:ok, npy2tensor(npy)}
+  defp load_npz(fname, convert) do
+    with {:ok, flist} <- :zip.unzip(String.to_charlist(fname), [:memory]) do
+      for {_, bin} <- flist do convert.(bin) end
+    else
       err -> err
     end
   end
 
-  defp from_bin(bin) do
+  defp from_bin!(bin) do
     with <<0x93, "NUMPY", major, _minor, rest::binary>> <- bin do
       {header, body} = case major do
         1 -> <<len::little-16, header::binary-size(len), body::binary>> = rest; {header, body}
@@ -83,14 +57,14 @@ defmodule Npy do
           [_, "False"] -> false
           _ -> nil
         end
-        shape = case Regex.run(~r/'shape': \((\d+(,\s*\d+)*)\),/, header) do
-          [_, shape|_] -> String.split(shape, ~r/,\s*/) |> Enum.map(&String.to_integer/1)
+        shape = case Regex.run(~r/'shape': \(((\d+,)|(\d+(, ?\d+)+))\),/, header) do
+          [_, shape|_] -> String.split(shape, ~r/, ?/, trim: true) |> Enum.map(&String.to_integer/1) |> List.to_tuple()
           _ -> nil
         end
 
-      {:ok, %Npy{descr: descr, fortran_order: fortran_order, shape: shape, data: body}}
+      %Npy{descr: descr, fortran_order: fortran_order, shape: shape, data: body}
     else
-      _ -> {:error, "illegal npy format"}
+      _ -> raise ArgumentError, message: "illegal npy binary"
     end
   end
 
@@ -100,7 +74,7 @@ defmodule Npy do
   def save(fname, npy_or_tensor) do
     File.write!(fname, to_bin(npy_or_tensor))
   end
-  
+
   @doc """
   """
   def savez(fname, npys) when is_list(npys) do
@@ -116,7 +90,12 @@ defmodule Npy do
   @doc """
   """
   def to_bin(%Npy{descr: descr, fortran_order: fortran_order, shape: shape, data: data}) do
-    header = "{'descr': '#{descr}', 'fortran_order': #{if fortran_order,do: "True",else: "False"}, 'shape': (#{Enum.join(shape, ", ")}), }"
+    py_tuple = case shape do
+      {one} -> "(#{one},)"
+      more  -> "(#{Enum.join(Tuple.to_list(more), ", ")})"
+    end
+
+    header = "{'descr': '#{descr}', 'fortran_order': #{if fortran_order,do: "True",else: "False"}, 'shape': #{py_tuple}, }"
     header = header <> String.duplicate(" ", 63-rem(byte_size(header)+10, 64)) <> "\n"  # tail padding
 
     <<0x93,"NUMPY",1,0>> <> <<byte_size(header)::little-integer-16>> <> header <> data
@@ -125,7 +104,7 @@ defmodule Npy do
   def to_bin(%Nx.Tensor{}=tensor) do
     to_bin(tensor2npy(tensor))
   end
-  
+
   @doc """
   convert %Npy{} to nested list
   """
@@ -137,7 +116,7 @@ defmodule Npy do
       _ -> nil
     end
 
-    if (flat_list), do: list_forming(Enum.reverse(shape), flat_list)
+    if (flat_list), do: list_forming(Enum.reverse(Tuple.to_list(shape)), flat_list)
   end
 
   defp list_forming([_],          formed), do: formed
@@ -157,7 +136,7 @@ defmodule Npy do
     if to_binary do
       %Npy{
         descr: descr,
-        shape: calc_shape(x),
+        shape: List.to_tuple(calc_shape(x)),
         data:  Enum.reduce(List.flatten(x), <<>>, to_binary)
       }
     end
@@ -166,4 +145,44 @@ defmodule Npy do
 
   defp calc_shape([item|_]=x), do: [Enum.count(x)|calc_shape(item)]
   defp calc_shape(_),          do: []
+
+  def tensor2npy(%Nx.Tensor{}=tensor) do
+    %Npy{
+      descr: case Nx.type(tensor) do
+        {:s,  8} -> "<i1"
+        {:s, 16} -> "<i2"
+        {:s, 32} -> "<i4"
+        {:s, 64} -> "<i8"
+        {:u,  8} -> "<u1"
+        {:u, 16} -> "<u2"
+        {:u, 32} -> "<u4"
+        {:u, 64} -> "<u8"
+        {:f, 32} -> "<f4"
+        {:f, 64} -> "<f8"
+        {:bf,16} -> "<f2"
+      end,
+      fortran_order: false,
+      shape: Nx.shape(tensor),
+      data: Nx.to_binary(tensor)
+    }
+  end
+
+  def npy2tensor(%Npy{}=npy) do
+    type = case npy.descr do
+      "<i1" -> {:s,  8}
+      "<i2" -> {:s, 16}
+      "<i4" -> {:s, 32}
+      "<i8" -> {:s, 64}
+      "<u1" -> {:u,  8}
+      "<u2" -> {:u, 16}
+      "<u4" -> {:u, 32}
+      "<u8" -> {:u, 64}
+      "<f4" -> {:f, 32}
+      "<f8" -> {:f, 64}
+      "<f2" -> {:bf,16}
+    end
+
+    Nx.from_binary(npy.data, type)
+    |> Nx.reshape(npy.shape)
+  end
 end
