@@ -26,7 +26,7 @@ defmodule Npy.MixProject do
     [
 #         {:elixir_make, "~> 0.6.2", runtime: false},
 #         {:exla, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "exla"},
-         {:nx, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "nx", override: true}
+      {:nx, "~> 0.1.0-dev", github: "elixir-nx/nx", branch: "main", sparse: "nx"}
     ]
   end
 end

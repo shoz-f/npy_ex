@@ -55,7 +55,7 @@ void Npy::Load(std::string filename)
 bool Npy::readDescr(const std::string& header)
 {
     std::smatch m;
-    const std::regex re(R"('descr'\s*:\s*'([<=>]?)([ifc])(\d?)')");
+    const std::regex re(R"('descr': '([<=>]?)([ifc])(\d?)')");
     std::regex_search(header, m, re);
     if (m.size() != 4) { return false; }
 
@@ -71,7 +71,7 @@ bool Npy::readDescr(const std::string& header)
 bool Npy::readFortranOrder(const std::string& header)
 {
     std::smatch m;
-    const std::regex re(R"('fortran_order'\s*:\s*(True|False))");
+    const std::regex re(R"('fortran_order': (True|False))");
     std::regex_search(header, m, re);
     if (m.size() != 2) { return false; }
     
@@ -82,7 +82,7 @@ bool Npy::readFortranOrder(const std::string& header)
 bool Npy::readShape(const std::string& header)
 {
     std::smatch m;
-    const std::regex re(R"('shape'\s*:\s*\(\s*(\d+[^)]*)\))");
+    const std::regex re(R"('shape': \(\s*(\d+[^)]*)\))");
     std::regex_search(header, m, re);
     if (m.size() != 2) { return false; }
 
@@ -153,12 +153,15 @@ std::string Npy::strShape()
 {
 	std::string shape;
 	
-	auto item = mShape.begin();
+    auto item = mShape.begin();
 	shape.append("(").append(std::to_string(*item++));
-	while (item < mShape.end()) {
-	    shape.append(", ").append(std::to_string(*item++));
+	if (mShape.size() == 1) {
+	    shape.append(",");
 	}
-	shape.append(")");
+	else while (item < mShape.end()) {
+        shape.append(", ").append(std::to_string(*item++));
+	}
+    shape.append(")");
 
 	return shape;
 }
