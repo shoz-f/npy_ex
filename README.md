@@ -1,6 +1,6 @@
 # Npy
 
-handling npy/npz files. load %Npy{} or Nx.tensor from the file and save them.
+handling npy/npz files. to load %Npy{} or Nx.tensor from the file or to save them.
 (experimetal)
 
 ## Installation
