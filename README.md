@@ -15,10 +15,12 @@ Npy is pure Elixir module. You need to add following code as a dependency to you
 ```elixir
 def deps do
   [
-    {:npy, "~> 0.1.0"}
+    {:npy, git: "https://github.com/shoz-f/npy_ex.git"}
   ]
 end
 ```
+
+I cannot publish this module to Hex, because depending module - Nx - isn't Hex member. 
 
 ## Hello World
 ```elixir
