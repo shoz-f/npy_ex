@@ -1,12 +1,16 @@
 # Npy
 
-handling npy/npz files. to load %Npy{} or Nx.tensor from the file or to save them.
-(experimetal)
+Npy handles npy/npz file - loading or saving array and so on. You can use Npy to exchange array data with Python.
+
+  1. load %Npy/%Nx.Tensor from npy file.
+  2. load a list of %Npy/%Nx.Tensor from npz - zipped npy - file.
+  3. save %Npy/%Nx.Tensor to npy file.
+  4. save a list of %Npy/%Nx.Tensor to npz file.
+  5. convert %Npy to/from %Nx.Tensor.
+  etc.
 
 ## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `npy` to your list of dependencies in `mix.exs`:
+Npy is pure Elixir module. You need to add following code as a dependency to your `mix.exs`:
 
 ```elixir
 def deps do
@@ -16,10 +20,15 @@ def deps do
 end
 ```
 
-### Attention
-./src is the memo for me. you don't need it.
+## Hello World
+```elixir
+iex> t = t = Nx.random_uniform({5,5})
+iex> Npy.save("random.npy", t)
+iex> {:ok, s} = Npy.load("random.npy"
+```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/npy](https://hexdocs.pm/npy).
+## C++ companion
+There are C++ codes to handle npy file under "cxx_companion" directory. You can use it in your C++ application to handle npy free.
 
+## License
+Npy is licensed under the Apache License Version 2.0.
