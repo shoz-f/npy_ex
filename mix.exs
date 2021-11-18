@@ -7,7 +7,11 @@ defmodule Npy.MixProject do
       version: "0.1.0",
       elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+#      description: description(),
+#      package: package(),
+      deps: deps(),
+      name: "npy_ex",
+      source_url: "https://github.com/shoz-f/npy_ex.git"
     ]
   end
 
@@ -21,7 +25,19 @@ defmodule Npy.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:nx, "~> 0.1.0-dev", github: "elixir-nx/nx", branch: "main", sparse: "nx"},
+      {:nx, "~> 0.1.0-dev", github: "elixir-nx/nx", branch: "main", sparse: "nx"}
     ]
   end
+  
+#  defp description() do
+#    "manipulating .npy in Elixir."
+#  end
+#
+#  defp package() do
+#    [
+#       name: "npy_ex",
+#      licenses: ["Apache-2.0"],
+#      links: %{"GitHub" => "https://github.com/shoz-f/npy_ex.git"}
+#    ]
+#  end
 end
