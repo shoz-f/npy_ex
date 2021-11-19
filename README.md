@@ -26,7 +26,7 @@ I cannot publish this module to Hex, because depending module - Nx - isn't Hex m
 ```elixir
 iex> t = t = Nx.random_uniform({5,5})
 iex> Npy.save("random.npy", t)
-iex> {:ok, s} = Npy.load("random.npy"
+iex> {:ok, s} = Npy.load("random.npy")
 ```
 
 ## C++ companion
