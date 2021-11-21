@@ -20,7 +20,7 @@ def deps do
 end
 ```
 
-I cannot publish this module to Hex, because depending module - Nx - isn't Hex member. 
+I cannot publish this module to Hex, because depending module - Nx - isn't Hex item yet. 
 
 ## Hello World
 ```elixir
