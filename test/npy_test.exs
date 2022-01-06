@@ -1,6 +1,5 @@
 defmodule NpyTest do
   use ExUnit.Case
-  doctest Npy
 
   test "load dog_output0.npy" do
     assert {:ok, npy} = Npy.load("test/dog_output0.npy")
