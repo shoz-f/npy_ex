@@ -7,7 +7,7 @@ Npy handles npy/npz file - loading or saving array and so on. You can use Npy to
   3. save %Npy/%Nx.Tensor to npy file.
   4. save a list of %Npy/%Nx.Tensor to npz file.
   5. convert %Npy to/from %Nx.Tensor.
-  etc.
+  6. save %Npy to CSV file.
 
 ## Installation
 Npy is pure Elixir module. You need to add following code as a dependency to your `mix.exs`:
@@ -15,7 +15,7 @@ Npy is pure Elixir module. You need to add following code as a dependency to you
 ```elixir
 def deps do
   [
-    {:npy, git: "https://github.com/shoz-f/npy_ex.git"}
+    {:npy, "~> 0.1.1"}
   ]
 end
 ```

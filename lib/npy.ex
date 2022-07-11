@@ -163,6 +163,42 @@ defmodule Npy do
   end
 
   @doc """
+  Save a %Npy to CSV file.
+  
+  For %Npy which has tow or one dimensonal shape.
+  
+  ## Examples
+  
+      iex> Npy.savecsv("sample.csv", %Npy{shape: {100, 20}})
+  """
+  def savecsv(fname, %Npy{descr: descr, shape: {y, x}, data: data}) do
+    src = case descr do
+      "<f4" -> {for <<x::little-float-32 <- data>> do x end, &Float.to_string/1}
+      "<i1" -> {for <<x::little-integer-8 <- data>> do x end, &Integer.to_string/1}
+      "<i4" -> {for <<x::little-integer-32 <- data>> do x end, &Integer.to_string/1}
+      _ -> {nil, nil}
+    end
+
+    with \
+      {flat_list, to_string} <- src,
+      file <- File.open!(fname, [:write])
+    do
+      list_forming([x, y], flat_list)
+      |> Enum.each(&write_csv(file, &1, to_string))
+
+      File.close(file)
+    end
+  end
+  
+  def savecsv(fname, %Npy{shape: {y}}=npy) do
+    savecsv(fname, %Npy{npy| shape: {y, 1}})
+  end
+
+  defp write_csv(file, dat, to_string) do
+    IO.puts(file, Enum.map(dat, to_string) |> Enum.join(","))
+  end
+
+  @doc """
   Convert %Npy/%Nx.Tensor to npy binary.
   
   ## Examples

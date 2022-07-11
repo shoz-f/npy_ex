@@ -4,7 +4,7 @@ defmodule Npy.MixProject do
   def project do
     [
       app: :npy,
-      version: "0.1.0",
+      version: "0.1.1",
       elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -12,7 +12,9 @@ defmodule Npy.MixProject do
       description: description(),
       package: package(),
 #      name: "npy_ex",
-      source_url: "https://github.com/shoz-f/npy_ex.git"
+      source_url: "https://github.com/shoz-f/npy_ex.git",
+
+      docs: docs()
     ]
   end
 
@@ -26,7 +28,8 @@ defmodule Npy.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:nx, "~> 0.1.0"}
+      {:ex_doc, "~> 0.14", only: :dev, runtime: false},
+      {:nx, "> 0.1.0"}
     ]
   end
   
@@ -38,7 +41,22 @@ defmodule Npy.MixProject do
     [
        name: "npy",
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => "https://github.com/shoz-f/npy_ex.git"}
+      links: %{"GitHub" => "https://github.com/shoz-f/npy_ex.git"},
+      files: ~w(lib mix.exs README* CHANGELOG* LICENSE*)
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      extras: [
+        "README.md",
+#        "LICENSE",
+        "CHANGELOG.md"
+      ],
+#      source_ref: "v#{@version}",
+#      source_url: @source_url,
+#      skip_undefined_reference_warnings_on: ["CHANGELOG.md"]
     ]
   end
 end
