@@ -78,6 +78,13 @@ defmodule Npy do
     end
   end
 
+  def load!(fname, mode \\ :npy) do
+    case load(fname, mode) do
+      {:ok, obj} -> obj
+      {:error, _} -> raise "illegal file"
+    end
+  end
+
   defp load_npy(fname, convert) do
     with {:ok, bin} <- File.read(fname) do
       {:ok, convert.(bin)}
@@ -134,13 +141,13 @@ defmodule Npy do
   
   ## Examples
   
-      iex> Npy.save("sample.npy", %Npy{})
+      iex> Npy.save(%Npy{}, "sample.npy")
       :ok
       
-      iex> Npy.save("sample.npy", %Nx.Tensor{})
+      iex> Npy.save(%Nx.Tensor{}, "sample.npy")
       :ok
   """
-  def save(fname, npy_or_tensor) do
+  def save(npy_or_tensor, fname) do
     File.write!(fname, to_bin(npy_or_tensor))
   end
 
@@ -149,10 +156,10 @@ defmodule Npy do
   
   ## Examples
   
-      iex> Npy.savez("sample.npz", [%Npy{}, %Nx.Tensor{}, ...])
+      iex> Npy.savez([%Npy{}, %Nx.Tensor{}, ...], "sample.npz")
       {:ok, "sample.npz"}
   """
-  def savez(fname, npys) when is_list(npys) do
+  def savez(npys, fname) when is_list(npys) do
     npz_list = if Keyword.keyword?(npys) do
         Enum.map(npys, fn {key, item} -> {Atom.to_charlist(key)++'.npy', to_bin(item)} end)
       else
@@ -163,39 +170,16 @@ defmodule Npy do
   end
 
   @doc """
-  Save a %Npy to CSV file.
+  Save a %Npy/%Nx.Tensor to CSV file.
   
-  For %Npy which has tow or one dimensonal shape.
+  For %Npy/%Nx.Tensor which has tow or one dimensonal shape.
   
   ## Examples
   
-      iex> Npy.savecsv("sample.csv", %Npy{shape: {100, 20}})
+      iex> Npy.savecsv(%Npy{shape: {100, 20}}, "sample.csv")
   """
-  def savecsv(fname, %Npy{descr: descr, shape: {y, x}, data: data}) do
-    src = case descr do
-      "<f4" -> {for <<x::little-float-32 <- data>> do x end, &Float.to_string/1}
-      "<i1" -> {for <<x::little-integer-8 <- data>> do x end, &Integer.to_string/1}
-      "<i4" -> {for <<x::little-integer-32 <- data>> do x end, &Integer.to_string/1}
-      _ -> {nil, nil}
-    end
-
-    with \
-      {flat_list, to_string} <- src,
-      file <- File.open!(fname, [:write])
-    do
-      list_forming([x, y], flat_list)
-      |> Enum.each(&write_csv(file, &1, to_string))
-
-      File.close(file)
-    end
-  end
-  
-  def savecsv(fname, %Npy{shape: {y}}=npy) do
-    savecsv(fname, %Npy{npy| shape: {y, 1}})
-  end
-
-  defp write_csv(file, dat, to_string) do
-    IO.puts(file, Enum.map(dat, to_string) |> Enum.join(","))
+  def savecsv(npy_or_tensor, fname) do
+    File.write!(fname, to_csv(npy_or_tensor))
   end
 
   @doc """
@@ -226,6 +210,42 @@ defmodule Npy do
   end
 
   @doc """
+  Convert %Npy/%Nx.Tensor to npy binary.
+  
+  ## Examples
+  
+      iex> Npy.to_bin(%Npy{})
+      <<....>>
+      
+      iex> Npy.to_bin(%Nx.Tensor{})
+      <<....>>
+  """
+  def to_csv(%Npy{descr: descr, shape: {_, x}, data: data}) do
+    make_csv = fn flat_list, to_string ->
+      Enum.chunk_every(flat_list, x)
+      |> Enum.reduce("", fn row,acc ->
+           acc <> (Enum.map(row, to_string) |> Enum.join(",")) <> "\n"
+         end)
+    end
+
+    case descr do
+      "<f4" -> make_csv.(for <<x::little-float-32 <- data>> do x end, &Float.to_string/1)
+      "<i1" -> make_csv.(for <<x::signed-little-integer-8 <- data>> do x end, &Integer.to_string/1)
+      "<i4" -> make_csv.(for <<x::signed-little-integer-32 <- data>> do x end, &Integer.to_string/1)
+      "<u1" -> make_csv.(for <<x::little-integer-8 <- data>> do x end, &Integer.to_string/1)
+      _ -> nil
+    end
+  end
+  
+  def to_csv(%Npy{shape: {y}}=npy) do
+    to_csv(%Npy{npy| shape: {y, 1}})
+  end
+
+  def to_csv(%Nx.Tensor{}=tensor) do
+    to_csv(tensor2npy(tensor))
+  end
+
+  @doc """
   Convert %Npy to a matrix list.
   
   ## Examples
@@ -242,8 +262,9 @@ defmodule Npy do
   def to_list(%Npy{descr: descr, shape: shape, data: data}) do
     flat_list = case descr do
       "<f4" -> for <<x::little-float-32 <- data>> do x end
-      "<i1" -> for <<x::little-integer-8 <- data>> do x end
-      "<i4" -> for <<x::little-integer-32 <- data>> do x end
+      "<i1" -> for <<x::signed-little-integer-8 <- data>> do x end
+      "<i4" -> for <<x::signed-little-integer-32 <- data>> do x end
+      "<u1" -> for <<x::little-integer-8 <- data>> do x end
       _ -> nil
     end
 
@@ -271,9 +292,9 @@ defmodule Npy do
   """
   def from_list(list, descr) when length(list) > 0 do
     to_binary = case descr do
-      "<f4" -> fn list,acc -> acc <> <<list::little-float-32>> end
-      "<i1" -> fn list,acc -> acc <> <<list::little-integer-8>> end
-      "<i4" -> fn list,acc -> acc <> <<list::little-integer-32>> end
+      "<f4" -> fn val,acc -> acc <> <<val::little-float-32>> end
+      "<i1" -> fn val,acc -> acc <> <<val::little-integer-8>> end
+      "<i4" -> fn val,acc -> acc <> <<val::little-integer-32>> end
       _ -> nil
     end
 
@@ -344,5 +365,20 @@ defmodule Npy do
 
     Nx.from_binary(npy.data, type)
     |> Nx.reshape(npy.shape)
+  end
+  
+  @doc """
+  Transpose axes.
+  
+  ## Examples
+  
+      iex> Npy.transpose(npy, [2, 0, 1])
+  """
+  def transpose(%Nx.Tensor{}=tensor, axes) do
+    Nx.transpose(tensor, axes: axes)
+  end
+  
+  def transpose(%Npy{}=npy, axes) do
+    npy2tensor(npy) |> transpose(axes) |> tensor2npy()
   end
 end

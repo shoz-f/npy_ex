@@ -21,7 +21,7 @@ defmodule NpyTest do
 
   test "save pred0.npy to pred1.npy" do
   	{:ok, npy} = Npy.load("test/pred0.npy")
-  	Npy.save("test/pred1.npy", npy)
+  	Npy.save(npy, "test/pred1.npy")
     assert {:ok, npy} = Npy.load("test/pred1.npy")
     assert %Npy{descr: "<f4", fortran_order: false, shape: {1,10647,4}} = npy
   end
