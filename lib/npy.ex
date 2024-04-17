@@ -1,12 +1,12 @@
 defmodule Npy do
   @moduledoc """
   Reading and writing array to Python npy/npz format file.
-  
+
   You can exchange matrix data - %Npy or %Nx.Tensor - with Python through npy/npz file.
-  
+
   ## Examples
   You make a uniform random tensor and save it to "random.npy" under Elixir.
-  
+
       [elixir]
       iex(1)> t = Nx.random_uniform({5,5})
       #Nx.Tensor<
@@ -23,7 +23,7 @@ defmodule Npy do
       :ok
 
   And then, you can read "random.npy" in Python.
-  
+
       [python]
       >>> import numpy as np
       >>> t = np.load("random.npy")
@@ -41,36 +41,26 @@ defmodule Npy do
   defstruct descr: "", fortran_order: false, shape: {}, data: <<>>
 
   @doc """
-  Load array from npy/npz and convert it to %Npy or %Nx.Tensor.
-  
+  Load array from npy/npz and convert it to %Npy.
+
   ## Parameters
 
-    * fname : file name. `load/2` returns a list of %Npy/%Nx.Tensors for "xxx.npz". 
-    * mode  : convertion mode
-      - `:npy`(default) - convert to %Npy{}
-      - `:nx`  - convert to %Nx.Tensor{}
+    * fname : file name. `load/1` returns a list of %Npy for "xxx.npz".
 
   ## Examples
-  
-      iex> Npy.load("sample.npy", :npy)
+
+      iex> Npy.load("sample.npy")
       {:ok, %Npy{...}}
-      
-      iex> Npy.load("sample.npy", :nx)
-      {:ok, #Nx.Tensor<...>}
-      
-      iex> Npy.load("sample.npz", :npy)
+
+      iex> Npy.load("sample.npz")
       {:ok, [%Npy{...}, %Npy{...}, ...]}
-      
-      iex> Npy.load("sample.npz", :nx)
-      {:ok, [#Nx.Tensor<...>, #Nx.Tensor<...>}, ...]}
-  """
-  def load(fname, mode \\ :npy) when mode in [:npy, :nx] do
+
+ """
+  def load(fname) do
     try do
-      case {Path.extname(fname), mode} do
-        {".npy", :npy} -> load_npy(fname, &from_bin!/1)
-        {".npy", :nx } -> load_npy(fname, &(npy2tensor(from_bin!(&1))))
-        {".npz", :npy} -> load_npz(fname, &from_bin!/1)
-        {".npz", :nx } -> load_npz(fname, &(npy2tensor(from_bin!(&1))))
+      case Path.extname(fname) do
+        ".npy" -> load_npy(fname, &from_bin!/1)
+        ".npz" -> load_npz(fname, &from_bin!/1)
         _ -> {:error, "illegal file"}
       end
     rescue
@@ -78,8 +68,8 @@ defmodule Npy do
     end
   end
 
-  def load!(fname, mode \\ :npy) do
-    case load(fname, mode) do
+  def load!(fname) do
+    case load(fname) do
       {:ok, obj} -> obj
       {:error, _} -> raise "illegal file"
     end
@@ -103,9 +93,9 @@ defmodule Npy do
 
   @doc """
   Convert npy format binary to %Npy.
-  
+
   ## Examples
-  
+
       iex> Npy.from_bin!(npy_bin)
       %Npy{...}
   """
@@ -137,30 +127,29 @@ defmodule Npy do
   end
 
   @doc """
-  Save %Npy/%Nx.Tensor to npy file.
-  
+  Save %Npy to npy file.
+
   ## Examples
-  
+
       iex> Npy.save(%Npy{}, "sample.npy")
       :ok
-      
-      iex> Npy.save(%Nx.Tensor{}, "sample.npy")
-      :ok
+
   """
-  def save(npy_or_tensor, fname) do
-    File.write!(fname, to_bin(npy_or_tensor))
+  def save(npy, fname) do
+    File.write!(fname, to_bin(npy))
   end
 
   @doc """
-  Save a list of %Npy/%Nx.Tensor to npz file.
-  
+  Save a list of %Npy to npz file.
+
   ## Examples
-  
-      iex> Npy.savez([%Npy{}, %Nx.Tensor{}, ...], "sample.npz")
+
+      iex> Npy.savez([%Npy{}, %Npy{}, ...], "sample.npz")
       {:ok, "sample.npz"}
   """
   def savez(npys, fname) when is_list(npys) do
-    npz_list = if Keyword.keyword?(npys) do
+    npz_list =
+      if Keyword.keyword?(npys) do
         Enum.map(npys, fn {key, item} -> {Atom.to_charlist(key)++'.npy', to_bin(item)} end)
       else
         Enum.map(Enum.with_index(npys), fn {item, index} -> {'arr_#{index}.npy', to_bin(item)} end)
@@ -170,28 +159,26 @@ defmodule Npy do
   end
 
   @doc """
-  Save a %Npy/%Nx.Tensor to CSV file.
-  
-  For %Npy/%Nx.Tensor which has tow or one dimensonal shape.
-  
+  Save a %Npy to CSV file.
+
+  For %Npy which has tow or one dimensonal shape.
+
   ## Examples
-  
+
       iex> Npy.savecsv(%Npy{shape: {100, 20}}, "sample.csv")
   """
-  def savecsv(npy_or_tensor, fname) do
-    File.write!(fname, to_csv(npy_or_tensor))
+  def savecsv(npy, fname) do
+    File.write!(fname, to_csv(npy))
   end
 
   @doc """
-  Convert %Npy/%Nx.Tensor to npy binary.
-  
+  Convert %Npy to npy binary.
+
   ## Examples
-  
+
       iex> Npy.to_bin(%Npy{})
       <<....>>
-      
-      iex> Npy.to_bin(%Nx.Tensor{})
-      <<....>>
+
   """
   def to_bin(%Npy{descr: descr, fortran_order: fortran_order, shape: shape, data: data}) do
     py_tuple = case shape do
@@ -205,20 +192,14 @@ defmodule Npy do
     <<0x93,"NUMPY",1,0>> <> <<byte_size(header)::little-integer-16>> <> header <> data
   end
 
-  def to_bin(%Nx.Tensor{}=tensor) do
-    to_bin(tensor2npy(tensor))
-  end
-
   @doc """
-  Convert %Npy/%Nx.Tensor to npy binary.
-  
+  Convert %Npy to npy binary.
+
   ## Examples
-  
+
       iex> Npy.to_bin(%Npy{})
       <<....>>
-      
-      iex> Npy.to_bin(%Nx.Tensor{})
-      <<....>>
+
   """
   def to_csv(%Npy{descr: descr, shape: {_, x}, data: data}) do
     make_csv = fn flat_list, to_string ->
@@ -236,20 +217,16 @@ defmodule Npy do
       _ -> nil
     end
   end
-  
+
   def to_csv(%Npy{shape: {y}}=npy) do
     to_csv(%Npy{npy| shape: {y, 1}})
   end
 
-  def to_csv(%Nx.Tensor{}=tensor) do
-    to_csv(tensor2npy(tensor))
-  end
-
   @doc """
   Convert %Npy to a matrix list.
-  
+
   ## Examples
-  
+
       iex> Npy.to_list(%Npy{})
       [
         [
@@ -276,9 +253,9 @@ defmodule Npy do
 
   @doc """
   Convert a matrix list to %Npy{descr: 'descr', ...}.
-  
+
   ## Parameters
-  
+
     * list : matrix list
     * descr : data type
       - `"<f4"` - float 32bit
@@ -286,7 +263,7 @@ defmodule Npy do
       - `"<i4"` - integer 32bit
 
   ## Examples
-  
+
       iex> Npy.from_list([[[4.384970664978027, ...], ...], ...], "<f4")
       %Npy{...}
   """
@@ -311,74 +288,27 @@ defmodule Npy do
   defp calc_shape([item|_]=x), do: [Enum.count(x)|calc_shape(item)]
   defp calc_shape(_),          do: []
 
-  @doc """
-  Convert %Nx.Tensor to %Nx.
-  
-  ## Examples
-  
-      iex> Npy.tensor2npy(%Nx{...})
-      %Npy{...}
-  """
-  def tensor2npy(%Nx.Tensor{}=tensor) do
-    %Npy{
-      descr: case Nx.type(tensor) do
-        {:s,  8} -> "<i1"
-        {:s, 16} -> "<i2"
-        {:s, 32} -> "<i4"
-        {:s, 64} -> "<i8"
-        {:u,  8} -> "<u1"
-        {:u, 16} -> "<u2"
-        {:u, 32} -> "<u4"
-        {:u, 64} -> "<u8"
-        {:f, 32} -> "<f4"
-        {:f, 64} -> "<f8"
-        {:bf,16} -> "<f2"
-      end,
-      fortran_order: false,
-      shape: Nx.shape(tensor),
-      data: Nx.to_binary(tensor)
-    }
-  end
+  # @doc """
+  # Transpose axes.
+
+  # ## Examples
+
+  #     iex> Npy.transpose(npy, [2, 0, 1])
+  # """
+  # def transpose(%Nx.Tensor{}=tensor, axes) do
+  #   Nx.transpose(tensor, axes: axes)
+  # end
+
+  # def transpose(%Npy{}=npy, axes) do
+  #   npy2tensor(npy) |> transpose(axes) |> tensor2npy()
+  # end
 
   @doc """
-  Convert %Npy to %Nx.Tensor.
-  
-  ## Examples
-  
-      iex> Npy.npy2tensor(%Npy{...})
-      #Nx.Tensor<...>
   """
-  def npy2tensor(%Npy{}=npy) do
-    type = case npy.descr do
-      "<i1" -> {:s,  8}
-      "<i2" -> {:s, 16}
-      "<i4" -> {:s, 32}
-      "<i8" -> {:s, 64}
-      "<u1" -> {:u,  8}
-      "<u2" -> {:u, 16}
-      "<u4" -> {:u, 32}
-      "<u8" -> {:u, 64}
-      "<f4" -> {:f, 32}
-      "<f8" -> {:f, 64}
-      "<f2" -> {:bf,16}
-    end
-
-    Nx.from_binary(npy.data, type)
-    |> Nx.reshape(npy.shape)
-  end
-  
-  @doc """
-  Transpose axes.
-  
-  ## Examples
-  
-      iex> Npy.transpose(npy, [2, 0, 1])
-  """
-  def transpose(%Nx.Tensor{}=tensor, axes) do
-    Nx.transpose(tensor, axes: axes)
-  end
-  
-  def transpose(%Npy{}=npy, axes) do
-    npy2tensor(npy) |> transpose(axes) |> tensor2npy()
+  def squeeze(%Npy{shape: shape}=npy) do
+    shape = Tuple.to_list(shape)
+      |> Enum.filter(&(&1 != 1))
+      |> List.to_tuple()
+    %Npy{npy | shape: shape}
   end
 end

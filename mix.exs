@@ -4,7 +4,7 @@ defmodule Npy.MixProject do
   def project do
     [
       app: :npy,
-      version: "0.1.2",
+      version: "0.1.3",
       elixir: "~> 1.10",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -29,10 +29,10 @@ defmodule Npy.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.14", only: :dev, runtime: false},
-      {:nx, "~> 0.2.1"}
+#      {:nx, "~> 0.2.1"}
     ]
   end
-  
+
   defp description() do
     "manipulating .npy in Elixir."
   end
